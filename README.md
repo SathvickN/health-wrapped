@@ -7,6 +7,10 @@ leaves your computer.
 > The `output/` folder and any health export are git-ignored. Your data is
 > never committed.
 
+> **Gotcha we hit (and fixed):** logging the same run in 3 apps (Apple Watch +
+> Strava + Runna) triple-counted mileage — 215 mi showed as 546 mi — until we
+> added [start-time de-duplication](#how-dedup-works).
+
 ---
 
 ## What you get
@@ -101,14 +105,19 @@ Writes `output/marathon_prep.txt`.
 
 ## Optional: AI summary
 
-`--ai-summary` calls a **local** [Ollama](https://ollama.com) model — nothing is
-sent to the cloud. If Ollama isn't running it's skipped silently.
+`--ai-summary` generates a 2-sentence coach narrative using a **fully
+open-source, locally-run** model — **Meta Llama 3.2 3B** (open weights) served
+by [Ollama](https://ollama.com). No API key, no cloud, nothing leaves your
+machine. If Ollama isn't running, the summary is skipped silently.
 
 ```bash
-ollama pull llama3.2:3b
+ollama pull llama3.2:3b            # ~2 GB, one-time download
 ollama serve                       # in another terminal
 python run.py --zip export.zip --year 2026 --ai-summary
 ```
+
+Swap to any other Ollama model (e.g. `mistral`, `qwen2.5`) by editing the
+`model` field in `ai_summary.py`.
 
 ---
 

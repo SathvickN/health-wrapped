@@ -1,0 +1,12 @@
+# Health data — NEVER commit this
+apple_health_export.zip
+export.zip
+apple_health_export/
+export.xml
+output/
+
+# Python
+__pycache__/
+*.pyc
+.env
+venv/

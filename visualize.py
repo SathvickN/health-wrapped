@@ -1,0 +1,120 @@
+"""Matplotlib charts. Dark theme. Saves PNGs to output/ at 300 DPI."""
+
+import os
+
+import matplotlib
+
+matplotlib.use("Agg")  # headless
+import matplotlib.pyplot as plt
+from matplotlib.ticker import FuncFormatter
+
+BLUE = "#4FC3F7"
+GREEN = "#81C784"
+ORANGE = "#FFB74D"
+RED = "#E57373"
+WHITE = "#FFFFFF"
+GRAY = "#B0BEC5"
+BG = "#1A1A2E"
+
+OUT = "output"
+
+
+def _new_fig():
+    plt.style.use("dark_background")
+    fig, ax = plt.subplots(figsize=(10, 6))
+    fig.patch.set_facecolor(BG)
+    ax.set_facecolor(BG)
+    return fig, ax
+
+
+def _save(fig, name):
+    path = os.path.join(OUT, name)
+    fig.savefig(path, dpi=300, facecolor=BG, bbox_inches="tight")
+    plt.close(fig)
+    return path
+
+
+def chart_monthly_mileage(stats, year):
+    miles = stats["monthly_miles"]
+    best = stats["best_month"]
+    fig, ax = _new_fig()
+    colors = [ORANGE if m == best else BLUE for m in miles.index]
+    bars = ax.bar(miles.index, miles.values, color=colors)
+    for b, v in zip(bars, miles.values):
+        ax.text(
+            b.get_x() + b.get_width() / 2,
+            b.get_height(),
+            f"{v:.0f}",
+            ha="center",
+            va="bottom",
+            color=WHITE,
+            fontsize=10,
+        )
+    ax.set_title(f"Monthly Mileage — {year}", color=WHITE, fontsize=16)
+    ax.set_ylabel("Miles", color=GRAY)
+    ax.tick_params(colors=GRAY)
+    return _save(fig, "monthly_mileage.png")
+
+
+def chart_pace_trend(stats, year):
+    pace = stats["pace_by_month"]
+    if len(pace) < 2:
+        print("  Skipping pace trend chart (fewer than 2 months of data).")
+        return None
+    fig, ax = _new_fig()
+    ax.plot(pace.index, pace.values, color=GREEN, marker="o", linewidth=2)
+    ax.axhline(stats["avg_pace"], color=GRAY, linestyle="--", linewidth=1,
+               label=f"Avg {_mmss(stats['avg_pace'])}")
+    ax.set_title(f"Avg Pace by Month — {year}", color=WHITE, fontsize=16)
+    ax.set_ylabel("Pace (min/mi)", color=GRAY)
+    ax.invert_yaxis()  # faster (lower) at top
+    # Format y ticks as MM:SS.
+    ax.yaxis.set_major_formatter(FuncFormatter(lambda v, _pos: _mmss(v)))
+    ax.tick_params(colors=GRAY)
+    ax.legend(facecolor=BG, edgecolor=GRAY, labelcolor=WHITE)
+    return _save(fig, "pace_trend.png")
+
+
+def _mmss(p):
+    m = int(p)
+    s = int(round((p - m) * 60))
+    if s == 60:
+        m += 1
+        s = 0
+    return f"{m}:{s:02d}"
+
+
+def chart_hr_zones(stats):
+    zones = stats["hr_zones"]
+    if sum(zones.values()) == 0:
+        print("  Skipping HR zones chart (no heart-rate data).")
+        return None
+    labels = ["Z1 easy", "Z2 aerobic", "Z3 tempo", "Z4 hard"]
+    vals = [zones["Z1"], zones["Z2"], zones["Z3"], zones["Z4"]]
+    colors = [BLUE, GREEN, ORANGE, RED]
+    # Drop empty wedges to avoid clutter.
+    data = [(l, v, c) for l, v, c in zip(labels, vals, colors) if v > 0]
+    labels, vals, colors = zip(*data)
+
+    fig, ax = _new_fig()
+    wedges, _ = ax.pie(vals, colors=colors, startangle=90,
+                       wedgeprops=dict(width=0.5))
+    ax.text(0, 0, "HR\nZones", ha="center", va="center", color=WHITE, fontsize=18)
+    ax.legend(
+        wedges,
+        [f"{l} — {v:.0f}%" for l, v in zip(labels, vals)],
+        loc="center left",
+        bbox_to_anchor=(1.0, 0.5),
+        facecolor=BG,
+        edgecolor=GRAY,
+        labelcolor=WHITE,
+    )
+    ax.set_title("Heart Rate Zone Distribution", color=WHITE, fontsize=16)
+    return _save(fig, "hr_zones.png")
+
+
+def generate_all_charts(stats, df, year=2026):
+    os.makedirs(OUT, exist_ok=True)
+    chart_monthly_mileage(stats, year)
+    chart_pace_trend(stats, year)
+    chart_hr_zones(stats)

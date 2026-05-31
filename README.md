@@ -116,6 +116,11 @@ ollama serve                       # in another terminal
 python run.py --zip export.zip --year 2026 --ai-summary
 ```
 
+**Where the model comes from:** `ollama pull` downloads from the
+[Ollama model registry](https://ollama.com/library/llama3.2) — *not* Hugging
+Face. (The same Llama 3.2 weights are also mirrored on Hugging Face under
+`meta-llama/Llama-3.2-3B`, but this project uses the Ollama copy.)
+
 Swap to any other Ollama model (e.g. `mistral`, `qwen2.5`) by editing the
 `model` field in `ai_summary.py`.
 

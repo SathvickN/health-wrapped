@@ -106,23 +106,31 @@ Writes `output/marathon_prep.txt`.
 ## Optional: AI summary
 
 `--ai-summary` generates a 2-sentence coach narrative using a **fully
-open-source, locally-run** model — **Meta Llama 3.2 3B** (open weights) served
-by [Ollama](https://ollama.com). No API key, no cloud, nothing leaves your
-machine. If Ollama isn't running, the summary is skipped silently.
+open-source, locally-run** model: **Meta Llama 3.2 3B Instruct** (open weights),
+**downloaded from the [Hugging Face Hub](https://huggingface.co/bartowski/Llama-3.2-3B-Instruct-GGUF)**.
+No API key, no cloud — the weights come from Hugging Face and inference runs
+on-device. If it can't run, the summary is skipped silently (the rest of the
+card still generates).
+
+**How it works:** on first use, `ai_summary.py` calls
+`huggingface_hub.hf_hub_download` to fetch the GGUF weights
+(`bartowski/Llama-3.2-3B-Instruct-GGUF`, Q4_K_M, ~2 GB) from Hugging Face, then
+registers them once with the local [Ollama](https://ollama.com) engine
+(`ollama create llama32-hf`) and runs inference locally.
 
 ```bash
-ollama pull llama3.2:3b            # ~2 GB, one-time download
-ollama serve                       # in another terminal
+# one-time: install the Ollama engine (https://ollama.com/download)
 python run.py --zip export.zip --year 2026 --ai-summary
+# first run downloads ~2 GB from Hugging Face, then caches it
 ```
 
-**Where the model comes from:** `ollama pull` downloads from the
-[Ollama model registry](https://ollama.com/library/llama3.2) — *not* Hugging
-Face. (The same Llama 3.2 weights are also mirrored on Hugging Face under
-`meta-llama/Llama-3.2-3B`, but this project uses the Ollama copy.)
+`huggingface_hub` is in `requirements.txt`. Want a different model? Change
+`HF_REPO` / `HF_FILE` at the top of `ai_summary.py` to any GGUF repo on
+Hugging Face.
 
-Swap to any other Ollama model (e.g. `mistral`, `qwen2.5`) by editing the
-`model` field in `ai_summary.py`.
+> The official `meta-llama/Llama-3.2-3B` repo on Hugging Face is **gated**
+> (needs an account + access token). This project uses the ungated
+> `bartowski` GGUF mirror, so no token is required.
 
 ---
 
@@ -151,7 +159,7 @@ parse_health.py   # stream export.xml → clean, de-duplicated workouts DataFram
 compute_stats.py  # aggregate workouts into a stats dict
 visualize.py      # matplotlib charts (PNG)
 generate_card.py  # Pillow shareable card
-ai_summary.py     # optional local-LLM coach summary
+ai_summary.py     # optional summary: Llama 3.2 3B from Hugging Face, run locally
 marathon_prep.py  # training-block vs YTD report + step totals
 ```
 

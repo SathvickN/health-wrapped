@@ -1,11 +1,66 @@
-"""Optional local Ollama AI summary. Fails silently to empty string."""
+"""Optional AI summary.
+
+The model is downloaded **from Hugging Face** (`huggingface_hub`) as a GGUF
+file, then run locally through the Ollama engine. No API key, no cloud — the
+weights come straight from the Hugging Face Hub and inference is on-device.
+
+Fails silently to an empty string if anything is unavailable.
+"""
+
+import subprocess
+import tempfile
 
 import requests
 
 from compute_stats import format_pace
 
+# Ungated GGUF mirror of Meta's Llama 3.2 3B Instruct on the Hugging Face Hub.
+HF_REPO = "bartowski/Llama-3.2-3B-Instruct-GGUF"
+HF_FILE = "Llama-3.2-3B-Instruct-Q4_K_M.gguf"
+# Local name Ollama registers the Hugging Face weights under.
+OLLAMA_MODEL = "llama32-hf"
+OLLAMA_URL = "http://localhost:11434/api/generate"
+
+
+def _ollama_has_model(name: str) -> bool:
+    try:
+        out = subprocess.run(["ollama", "list"], capture_output=True,
+                             text=True, timeout=30)
+        return any(line.split()[:1] == [name] or line.startswith(name + ":")
+                   for line in out.stdout.splitlines())
+    except (OSError, subprocess.SubprocessError):
+        return False
+
+
+def ensure_model() -> bool:
+    """Download the GGUF from Hugging Face and register it with Ollama once."""
+    if _ollama_has_model(OLLAMA_MODEL):
+        return True
+    try:
+        from huggingface_hub import hf_hub_download
+    except ImportError:
+        print("  huggingface_hub not installed; skipping AI summary.")
+        return False
+    try:
+        print(f"  Downloading {HF_FILE} from Hugging Face ({HF_REPO})...")
+        gguf_path = hf_hub_download(repo_id=HF_REPO, filename=HF_FILE)
+        with tempfile.NamedTemporaryFile("w", suffix=".Modelfile",
+                                         delete=False) as mf:
+            mf.write(f"FROM {gguf_path}\n")
+            modelfile = mf.name
+        print(f"  Registering with Ollama as '{OLLAMA_MODEL}'...")
+        subprocess.run(["ollama", "create", OLLAMA_MODEL, "-f", modelfile],
+                       check=True, timeout=300)
+        return True
+    except Exception as e:  # noqa: BLE001 - optional feature, never fatal
+        print(f"  Could not prepare HF model ({type(e).__name__}); skipping.")
+        return False
+
 
 def generate_summary(stats: dict) -> str:
+    if not ensure_model():
+        return ""
+
     prompt = f"""You are a running coach. Given these stats, write exactly 2 sentences summarizing this runner's year. Be specific, encouraging, and mention one key achievement and one area to focus on next.
 
 Stats:
@@ -20,9 +75,9 @@ Write only the 2 sentences. No preamble."""
 
     try:
         response = requests.post(
-            "http://localhost:11434/api/generate",
-            json={"model": "llama3.2:3b", "prompt": prompt, "stream": False},
-            timeout=30,
+            OLLAMA_URL,
+            json={"model": OLLAMA_MODEL, "prompt": prompt, "stream": False},
+            timeout=120,
         )
         response.raise_for_status()
         return response.json()["response"].strip()

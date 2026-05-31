@@ -12,8 +12,6 @@ import tempfile
 
 import requests
 
-from compute_stats import format_pace
-
 # Ungated GGUF mirror of Meta's Llama 3.2 3B Instruct on the Hugging Face Hub.
 HF_REPO = "bartowski/Llama-3.2-3B-Instruct-GGUF"
 HF_FILE = "Llama-3.2-3B-Instruct-Q4_K_M.gguf"
@@ -61,17 +59,8 @@ def generate_summary(stats: dict) -> str:
     if not ensure_model():
         return ""
 
-    prompt = f"""You are a running coach. Given these stats, write exactly 2 sentences summarizing this runner's year. Be specific, encouraging, and mention one key achievement and one area to focus on next.
-
-Stats:
-- Total runs: {stats['total_runs']}
-- Total miles: {stats['total_miles']:.1f}
-- Best pace: {format_pace(stats['best_pace'])}
-- Avg pace: {format_pace(stats['avg_pace'])}
-- Longest run: {stats['longest_run_miles']:.1f} miles
-- Pace improvement: {stats['pace_improvement']:.0f} seconds/mile faster since January
-
-Write only the 2 sentences. No preamble."""
+    prompt = """Write one short, punchy, original running motivation quote, max 12 words.
+Reply with ONLY the quote sentence itself. No preamble, no notes, no author, no quotation marks."""
 
     try:
         response = requests.post(
@@ -80,7 +69,50 @@ Write only the 2 sentences. No preamble."""
             timeout=120,
         )
         response.raise_for_status()
-        return response.json()["response"].strip()
+        quote = _clean_quote(response.json()["response"])
+        return quote if _looks_like_quote(quote) else _fallback_quote()
     except (requests.exceptions.RequestException, KeyError, ValueError) as e:
-        print(f"  AI summary unavailable ({type(e).__name__}); skipping.")
-        return ""
+        print(f"  AI summary unavailable ({type(e).__name__}); using a quote.")
+        return _fallback_quote()
+
+
+# Words that mark text as the model's meta-chatter, not the quote itself.
+_META = ("punctuation", "quotation", "quote", "preamble", "note", "author",
+         "sentence", "here is", "here are", "here's", "example", "you can",
+         "subject", "tone", "sure", "output", "feel free", "let me know",
+    "looking for", "hope this", "is this what", "i hope")
+
+# Clean curated fallbacks so the card always shows something good.
+_QUOTES = [
+    "One run can change your day. Many runs can change your life.",
+    "The miracle isn't that I finished — it's that I had the courage to start.",
+    "Run when you can, walk if you have to, crawl if you must; just never give up.",
+    "Your only limit is the one you set yourself.",
+    "Every mile begins with a single step. Keep stepping.",
+    "Pain is temporary. Pride is forever.",
+    "Don't count the miles, make the miles count.",
+    "The road doesn't end where your doubt begins.",
+]
+
+
+def _fallback_quote() -> str:
+    import random
+    return random.choice(_QUOTES)
+
+
+def _looks_like_quote(q: str) -> bool:
+    """Reject empty, too-long, or meta-laden model output."""
+    if not q:
+        return False
+    words = q.split()
+    if not (3 <= len(words) <= 16):
+        return False
+    return not any(w in q.lower() for w in _META)
+
+
+def _clean_quote(text: str) -> str:
+    """Strip a small chatty model's preamble down to just the quote."""
+    text = text.replace('"', "").replace("“", "").replace("”", "")
+    lines = [ln.strip(" -*•\t") for ln in text.splitlines() if ln.strip()]
+    good = [ln for ln in lines if not any(w in ln.lower() for w in _META)]
+    return (good[0] if good else (lines[-1] if lines else "")).strip()

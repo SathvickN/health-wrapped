@@ -3,8 +3,6 @@
 import argparse
 import os
 
-import pandas as pd
-
 from parse_health import parse_workouts
 from compute_stats import compute_all_stats, format_pace
 from visualize import generate_all_charts
@@ -64,20 +62,12 @@ def main():
     parser.add_argument("--name", default="Your Name", help="Name shown on card")
     parser.add_argument("--age", type=int, default=None,
                         help="Used for HR-zone max-HR (220-age). Default max 185.")
-    parser.add_argument("--no-cache", action="store_true",
-                        help="Force re-parse instead of using cached workouts.")
     args = parser.parse_args()
 
     os.makedirs("output", exist_ok=True)
 
-    cache = f"output/.workouts_{args.year}.pkl"
-    if os.path.exists(cache) and not args.no_cache:
-        print(f"Loading cached workouts from {cache} (use --no-cache to re-parse)...")
-        df = pd.read_pickle(cache)
-    else:
-        print(f"Parsing {args.zip}...")
-        df = parse_workouts(args.zip, year=args.year)
-        df.to_pickle(cache)
+    print(f"Parsing {args.zip}...")
+    df = parse_workouts(args.zip, year=args.year)
     print(f"Found {len(df)} running workouts in {args.year}")
 
     if len(df) == 0:
@@ -105,7 +95,7 @@ def main():
     generate_card(stats, name=args.name, ai_text=ai_text, year=args.year)
 
     print("\nDone! Check the output/ folder.")
-    for f in ("stats.txt", "monthly_mileage.png", "pace_trend.png",
+    for f in ("stats.txt", "monthly_mileage.png",
               "hr_zones.png", "year_in_review_card.png"):
         print(f"  output/{f}")
 

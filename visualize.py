@@ -6,7 +6,6 @@ import matplotlib
 
 matplotlib.use("Agg")  # headless
 import matplotlib.pyplot as plt
-from matplotlib.ticker import FuncFormatter
 
 BLUE = "#4FC3F7"
 GREEN = "#81C784"
@@ -56,34 +55,6 @@ def chart_monthly_mileage(stats, year):
     return _save(fig, "monthly_mileage.png")
 
 
-def chart_pace_trend(stats, year):
-    pace = stats["pace_by_month"]
-    if len(pace) < 2:
-        print("  Skipping pace trend chart (fewer than 2 months of data).")
-        return None
-    fig, ax = _new_fig()
-    ax.plot(pace.index, pace.values, color=GREEN, marker="o", linewidth=2)
-    ax.axhline(stats["avg_pace"], color=GRAY, linestyle="--", linewidth=1,
-               label=f"Avg {_mmss(stats['avg_pace'])}")
-    ax.set_title(f"Avg Pace by Month — {year}", color=WHITE, fontsize=16)
-    ax.set_ylabel("Pace (min/mi)", color=GRAY)
-    ax.invert_yaxis()  # faster (lower) at top
-    # Format y ticks as MM:SS.
-    ax.yaxis.set_major_formatter(FuncFormatter(lambda v, _pos: _mmss(v)))
-    ax.tick_params(colors=GRAY)
-    ax.legend(facecolor=BG, edgecolor=GRAY, labelcolor=WHITE)
-    return _save(fig, "pace_trend.png")
-
-
-def _mmss(p):
-    m = int(p)
-    s = int(round((p - m) * 60))
-    if s == 60:
-        m += 1
-        s = 0
-    return f"{m}:{s:02d}"
-
-
 def chart_hr_zones(stats):
     zones = stats["hr_zones"]
     if sum(zones.values()) == 0:
@@ -116,5 +87,4 @@ def chart_hr_zones(stats):
 def generate_all_charts(stats, df, year=2026):
     os.makedirs(OUT, exist_ok=True)
     chart_monthly_mileage(stats, year)
-    chart_pace_trend(stats, year)
     chart_hr_zones(stats)

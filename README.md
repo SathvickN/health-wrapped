@@ -21,7 +21,6 @@ Running into `output/`:
 |------|------|
 | `year_in_review_card.png` | Shareable 1080×1080 card: 8 stat tiles + monthly bar chart |
 | `monthly_mileage.png` | Bar chart of miles per month |
-| `pace_trend.png` | Avg pace per month (line) |
 | `hr_zones.png` | Heart-rate zone distribution (pie) |
 | `stats.txt` | Plain-text year summary |
 | `marathon_prep.txt` | YTD vs. training-block comparison (optional tool) |
@@ -66,9 +65,7 @@ directly — no need to unzip.
 python run.py --zip export.zip --year 2026 --name "Your Name"
 ```
 
-First run parses the whole export (slow — minutes for large exports) and caches
-the parsed workouts to `output/.workouts_<year>.pkl`. Later runs reuse the
-cache instantly.
+Parsing the whole export can take a minute or two on large exports.
 
 ### Options
 
@@ -79,14 +76,7 @@ cache instantly.
 | `--name` | `Your Name` | Name shown on the card |
 | `--age` | none | Used for HR-zone max-HR (`220 − age`); default max 185 |
 | `--stats-only` | off | Print/save text stats only, skip images |
-| `--ai-summary` | off | Add a 2-sentence coach summary (needs local Ollama, see below) |
-| `--no-cache` | off | Force re-parse instead of using the cached workouts |
-
-Re-parse from scratch (e.g. after a new export):
-
-```bash
-python run.py --zip export.zip --year 2026 --name "Your Name" --no-cache
-```
+| `--ai-summary` | off | Add a short AI running quote to the card (needs local Ollama, see below) |
 
 ---
 

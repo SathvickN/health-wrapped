@@ -59,13 +59,25 @@ def generate_summary(stats: dict) -> str:
     if not ensure_model():
         return ""
 
-    prompt = """Write one short, punchy, original running motivation quote, max 12 words.
-Reply with ONLY the quote sentence itself. No preamble, no notes, no author, no quotation marks."""
+    # Small (3B) models obey best with a strict role, a one-shot format
+    # example, and hard generation limits (short output, stop at newline).
+    system = ("You output exactly ONE original running motivation quote and "
+              "nothing else. No preamble, no explanation, no author, no "
+              "quotation marks. One line only.")
+    prompt = ("Example: Miles make the runner.\n"
+              "Now write a different short, punchy running quote (5-10 words):")
 
     try:
         response = requests.post(
             OLLAMA_URL,
-            json={"model": OLLAMA_MODEL, "prompt": prompt, "stream": False},
+            json={
+                "model": OLLAMA_MODEL,
+                "system": system,
+                "prompt": prompt,
+                "stream": False,
+                "options": {"temperature": 0.9, "num_predict": 32,
+                            "stop": ["\n"]},
+            },
             timeout=120,
         )
         response.raise_for_status()

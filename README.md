@@ -229,15 +229,6 @@ marathon_prep.py  # training-block vs YTD report + step totals
 
 ---
 
-## Roadmap
-
-- 💬 **Chat with your own data** — a small local web UI (running on `localhost`)
-  where you ask questions about your training in plain language and the
-  **on-device** model answers. Everything stays on your machine — your health
-  history never reaches any company's servers.
-
----
-
 ## License
 
 [MIT](LICENSE) © 2026 Sathvick Narahari

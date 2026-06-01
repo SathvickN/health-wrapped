@@ -14,7 +14,7 @@ import generate_card as gc
 from parse_health import parse_activities
 from compute_stats import compute_activity_stats, calorie_fun_line
 
-OUT = "output/activity_review_card.png"
+OUT = "output/activity_report_card.png"
 
 
 def _fit_value(d, text, max_w, sizes=(38, 32, 26, 22)):
@@ -170,7 +170,7 @@ def main():
     print("\nGenerating activity card...")
     build_card(stats, name=args.name, year=args.year)
     print("\nDone! Check the output/ folder.")
-    for f in ("activity_stats.txt", "activity_review_card.png"):
+    for f in ("activity_stats.txt", "activity_report_card.png"):
         print(f"  output/{f}")
 
 

@@ -96,7 +96,7 @@ def _draw_bar_chart(d, stats, x0, y0, x1, y1, f_label, f_small, best=None):
 
 
 def generate_card(stats, name="Your Name", ai_text="", year=2026,
-                  out_path="output/year_in_review_card.png"):
+                  out_path="output/run_report_card.png"):
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     img = Image.new("RGB", (W, H), BG)
     d = ImageDraw.Draw(img)

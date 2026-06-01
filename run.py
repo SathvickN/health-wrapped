@@ -96,7 +96,7 @@ def main():
 
     print("\nDone! Check the output/ folder.")
     for f in ("stats.txt", "monthly_mileage.png",
-              "hr_zones.png", "year_in_review_card.png"):
+              "hr_zones.png", "run_report_card.png"):
         print(f"  output/{f}")
 
 

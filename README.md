@@ -1,16 +1,19 @@
 # Apple Health Report 🏃
 
-Turn your Apple Health export into Spotify-Wrapped-style stat cards — for your
-**runs** and for **every workout type** (walks, cycling, strength, ...) — plus
-charts and text reports. All processed **locally** on your machine. No data
-leaves your computer.
+I wanted a Spotify-Wrapped-style recap of my training, but for Apple Health —
+so I built one. It turns your Health export into clean stat cards for your
+**runs** and for **every workout type** (walks, cycling, strength, ...), plus
+charts and text reports. Everything runs **locally** on your machine — none of
+your health data ever leaves your computer.
 
 > The `output/` folder and any health export are git-ignored. Your data is
 > never committed.
 
-> **Gotcha we hit (and fixed):** logging the same run in 3 apps (Apple Watch +
-> Strava + Runna) triple-counted mileage — 215 mi showed as 546 mi — until we
-> added [start-time de-duplication](#how-dedup-works).
+> **The bug that fooled me at first:** I track every run in three apps at once
+> (Apple Watch, Strava, Runna), so each one got counted three times. My "546
+> miles" was really 215. Catching that — and fixing it with
+> [start-time de-duplication](#how-dedup-works) — turned out to be the most
+> interesting part of the project.
 
 ---
 

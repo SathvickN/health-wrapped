@@ -31,22 +31,31 @@ _XML_CANDIDATES = (
 KM_TO_MI = 0.621371
 M_TO_FT = 3.28084
 
-# Same physical run is often logged by several apps (Apple Watch, Strava,
-# Runna...) with near-identical start times. Cluster starts within this many
-# minutes and collapse to one run. Source priority decides the representative
-# distance/duration and which device's HR/calories to trust first.
+# Same physical workout is often logged by several apps/devices with
+# near-identical start times. Cluster starts within this many minutes and
+# collapse to one. The representative is the most complete record; source name
+# is only a tiebreak — so any device (Garmin, Whoop, ...) works, not a fixed list.
 DEDUP_WINDOW_MIN = 15
 
 
+# Wearables (wrist GPS + HR) generally hold the most complete record, so they
+# win ties. This is only a *tiebreak* — the representative is chosen by data
+# completeness first (see _dedup_*), so unknown sources still work fine.
+# Add your device's name here if you want it to win close calls.
+_WEARABLE_HINTS = ("watch", "garmin", "whoop", "fitbit", "coros", "polar",
+                   "oura", "suunto", "wahoo", "amazfit", "pixel watch")
+_APP_HINTS = ("strava", "runna", "nike", "adidas", "mapmyrun", "runkeeper",
+              "komoot")
+
+
 def _source_rank(name: str) -> int:
+    """Tiebreak priority: wearable (0) > known app (1) > unknown (2)."""
     n = (name or "").lower()
-    if "watch" in n:
-        return 0   # wrist GPS + HR — most complete
-    if "strava" in n:
+    if any(h in n for h in _WEARABLE_HINTS):
+        return 0
+    if any(h in n for h in _APP_HINTS):
         return 1
-    if "runna" in n:
-        return 2
-    return 9
+    return 2
 
 
 def _find_xml_name(zf: zipfile.ZipFile) -> str:
@@ -181,11 +190,15 @@ def _dedup_workouts(df: pd.DataFrame,
         cluster_ids.append(cid)
     df = df.assign(_cluster=cluster_ids)
     df["_rank"] = df["source"].map(_source_rank)
+    # Prefer the most complete record (most of distance/HR/calories present);
+    # source name only breaks ties. Works for any device, not a fixed list.
+    df["_complete"] = df[["distance_mi", "avg_hr", "calories"]].notna().sum(axis=1)
 
     merged = []
     for _, g in df.groupby("_cluster"):
-        g = g.sort_values("_rank")
-        rep = g.iloc[0]  # highest-priority source
+        g = g.sort_values(["_complete", "_rank", "duration_min"],
+                          ascending=[False, True, False])
+        rep = g.iloc[0]  # most complete record (source name breaks ties)
 
         def pick(col):
             """Representative value, else first non-null in the cluster."""
@@ -271,6 +284,7 @@ def _dedup_activities(df: pd.DataFrame,
         return df
     df = df.sort_values(["activity", "date"]).reset_index(drop=True)
     df["_rank"] = df["source"].map(_source_rank)
+    df["_complete"] = df[["distance_mi", "avg_hr", "calories"]].notna().sum(axis=1)
 
     cluster_ids = []
     cid = -1
@@ -287,8 +301,9 @@ def _dedup_activities(df: pd.DataFrame,
 
     merged = []
     for _, g in df.groupby("_cluster"):
-        g = g.sort_values("_rank")
-        rep = g.iloc[0]
+        g = g.sort_values(["_complete", "_rank", "duration_min"],
+                          ascending=[False, True, False])
+        rep = g.iloc[0]  # most complete record (source name breaks ties)
 
         def pick(col):
             if pd.notna(rep[col]):

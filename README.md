@@ -150,18 +150,20 @@ editing `HF_REPO` / `HF_FILE` at the top of `ai_summary.py` — e.g.
 
 ## How dedup works
 
-The same physical run is often recorded by several apps with near-identical
-start times. `parse_health.py` clusters runs whose start times fall within
-**15 minutes** and keeps one per cluster, by source priority:
+The same physical workout is often recorded by several apps/devices with
+near-identical start times. `parse_health.py` clusters workouts whose start
+times fall within **15 minutes** and keeps one per cluster.
 
-```
-Apple Watch  >  Strava  >  Runna
-```
+It picks the **most complete record** in each cluster — the row with the most of
+{distance, heart rate, calories} present. This is **not a hardcoded source
+list**, so it works with any device: Apple Watch, Garmin, Whoop, Fitbit, Coros,
+Strava, Runna, etc. Source name is only a *tiebreak* when two records are
+equally complete (wearables edge out phone apps). Any missing field on the
+chosen row falls back to the first source in the cluster that has it — so an
+Apple Watch heart rate is kept even if a phone-app row is otherwise picked.
 
-The representative source decides distance/duration/pace; heart-rate and
-calories fall back to the first source in the cluster that has them (so an
-Apple Watch HR is preserved even if a phone-app row is chosen). Adjust the
-window or priority in `parse_health.py` (`DEDUP_WINDOW_MIN`, `_source_rank`).
+Tune it in `parse_health.py`: `DEDUP_WINDOW_MIN` (time window) and the
+`_WEARABLE_HINTS` / `_APP_HINTS` lists used by `_source_rank` for tiebreaks.
 
 ---
 

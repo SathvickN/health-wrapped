@@ -23,9 +23,18 @@ _FONT_CANDIDATES = [
     "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
 ]
 
+_FONT_BOLD_CANDIDATES = [
+    "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
+    "/Library/Fonts/Arial Bold.ttf",
+    "/System/Library/Fonts/HelveticaNeue.ttc",
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+]
 
-def _font(size):
-    for path in _FONT_CANDIDATES:
+
+def _font(size, bold=False):
+    candidates = (_FONT_BOLD_CANDIDATES + _FONT_CANDIDATES) if bold \
+        else _FONT_CANDIDATES
+    for path in candidates:
         if os.path.exists(path):
             try:
                 return ImageFont.truetype(path, size)
@@ -194,12 +203,12 @@ def generate_mini_card(stats, name="Your Name", year=2026,
     img = _vgradient(mw, mh, (255, 126, 95), (94, 23, 235)).convert("RGBA")
     cx = mw / 2
 
-    f_kick = _font(52)
+    f_kick = _font(56, bold=True)
     f_kick2 = _font(34)
-    f_num = _font(150)
-    f_label = _font(38)
+    f_num = _font(156, bold=True)
+    f_label = _font(40, bold=True)
     f_micro = _font(30)
-    f_foot = _font(36)
+    f_foot = _font(38, bold=True)
 
     items = [
         ("TOTAL RUNS", f"{stats['total_runs']}",
@@ -220,7 +229,7 @@ def generate_mini_card(stats, name="Your Name", year=2026,
     for i in range(len(items)):
         y0 = top + i * (ph + gap)
         od.rounded_rectangle([margin, y0, mw - margin, y0 + ph],
-                             radius=44, fill=(0, 0, 0, 110))
+                             radius=44, fill=(0, 0, 0, 165))
     img = Image.alpha_composite(img, overlay)
     d = ImageDraw.Draw(img)
 
@@ -237,7 +246,7 @@ def generate_mini_card(stats, name="Your Name", year=2026,
         _text_center(d, cx, y0 + 40, label, f_label, color)
         nb = d.textbbox((0, 0), val, font=f_num)
         d.text((cx - nb[2] / 2, cyc - 95), val, font=f_num, fill=WHITE)
-        _text_center(d, cx, y0 + ph - 64, micro, f_micro, (220, 220, 230))
+        _text_center(d, cx, y0 + ph - 64, micro, f_micro, (240, 240, 245))
 
     _text_center(d, cx, mh - 150, name, f_foot, WHITE)
     _text_center(d, cx, mh - 96, "made locally · 100% private", f_micro,

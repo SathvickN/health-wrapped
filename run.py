@@ -7,7 +7,7 @@ from parse_health import parse_workouts
 from compute_stats import compute_all_stats, format_pace
 from visualize import generate_all_charts
 from generate_card import generate_card
-from ai_summary import generate_summary
+from ai_summary import generate_summary, generate_analysis
 
 
 def print_stats(stats, year, fh=None):
@@ -59,6 +59,9 @@ def main():
     parser.add_argument("--year", type=int, default=2026)
     parser.add_argument("--stats-only", action="store_true")
     parser.add_argument("--ai-summary", action="store_true")
+    parser.add_argument("--ai-analysis", action="store_true",
+                        help="Write a local-LLM coaching analysis to "
+                             "output/ai_analysis.md.")
     parser.add_argument("--name", default="Your Name", help="Name shown on card")
     parser.add_argument("--age", type=int, default=None,
                         help="Used for HR-zone max-HR (220-age). Default max 185.")
@@ -80,6 +83,15 @@ def main():
     with open("output/stats.txt", "w") as fh:
         print_stats(stats, args.year, fh=fh)
 
+    if args.ai_analysis:
+        print("Generating AI coaching analysis (local LLM)...")
+        analysis = generate_analysis(stats)
+        if analysis:
+            with open("output/ai_analysis.md", "w") as fh:
+                fh.write(f"# {args.year} Running Analysis — {args.name}\n\n")
+                fh.write(analysis + "\n")
+            print("  Wrote output/ai_analysis.md")
+
     if args.stats_only:
         return
 
@@ -95,8 +107,11 @@ def main():
     generate_card(stats, name=args.name, ai_text=ai_text, year=args.year)
 
     print("\nDone! Check the output/ folder.")
-    for f in ("stats.txt", "monthly_mileage.png",
-              "hr_zones.png", "run_report_card.png"):
+    outs = ["stats.txt", "monthly_mileage.png", "hr_zones.png",
+            "run_report_card.png"]
+    if args.ai_analysis:
+        outs.append("ai_analysis.md")
+    for f in outs:
         print(f"  output/{f}")
 
 

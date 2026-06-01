@@ -12,6 +12,8 @@ import tempfile
 
 import requests
 
+from compute_stats import format_pace
+
 # Ungated GGUF mirror of Meta's Llama 3.2 3B Instruct on the Hugging Face Hub.
 HF_REPO = "bartowski/Llama-3.2-3B-Instruct-GGUF"
 HF_FILE = "Llama-3.2-3B-Instruct-Q4_K_M.gguf"
@@ -53,6 +55,59 @@ def ensure_model() -> bool:
     except Exception as e:  # noqa: BLE001 - optional feature, never fatal
         print(f"  Could not prepare HF model ({type(e).__name__}); skipping.")
         return False
+
+
+def generate_analysis(stats: dict) -> str:
+    """Full coaching analysis (markdown) generated locally from real stats."""
+    if not ensure_model():
+        return ""
+
+    hr = stats.get("avg_hr")
+    hr_line = f"- Average heart rate: {hr:.0f} bpm\n" if hr == hr else ""
+    facts = (
+        f"- Total runs: {stats['total_runs']}\n"
+        f"- Total miles: {stats['total_miles']:.1f}\n"
+        f"- Total time: {stats['total_time_hours']:.1f} hours\n"
+        f"- Average pace: {format_pace(stats['avg_pace'])}\n"
+        f"- Best pace: {format_pace(stats['best_pace'])}\n"
+        f"- Longest run: {stats['longest_run_miles']:.1f} miles\n"
+        f"{hr_line}"
+        f"- Best month: {stats['best_month']} ({stats['best_month_miles']:.0f} mi)\n"
+        f"- Pace change, first to last month: {stats['pace_improvement']:.0f} s/mi"
+    )
+    system = ("You are an experienced, encouraging running coach. Analyze the "
+              "runner's year using ONLY the stats provided. Reference the actual "
+              "numbers. Be specific and honest, not generic.")
+    prompt = (
+        "Here are a runner's stats for the year:\n\n"
+        f"{facts}\n\n"
+        "Write a concise markdown analysis with exactly these sections:\n"
+        "## Overview\n(2 sentences)\n"
+        "## What's going well\n(2-3 bullet points)\n"
+        "## What to work on\n(2-3 bullet points)\n"
+        "## Suggested next goal\n(1 sentence)\n\n"
+        "Reference the real numbers above. No preamble, start at the heading."
+    )
+    try:
+        response = requests.post(
+            OLLAMA_URL,
+            json={
+                "model": OLLAMA_MODEL,
+                "system": system,
+                "prompt": prompt,
+                "stream": False,
+                "options": {"temperature": 0.7, "num_predict": 600},
+            },
+            timeout=180,
+        )
+        response.raise_for_status()
+        text = response.json()["response"].strip()
+        # Start at the first markdown heading if the model added preamble.
+        idx = text.find("## ")
+        return text[idx:].strip() if idx != -1 else text
+    except (requests.exceptions.RequestException, KeyError, ValueError) as e:
+        print(f"  AI analysis unavailable ({type(e).__name__}); skipping.")
+        return ""
 
 
 def generate_summary(stats: dict) -> str:

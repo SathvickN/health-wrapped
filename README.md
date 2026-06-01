@@ -44,7 +44,7 @@ Stats are **de-duplicated**: if you log the same workout in multiple apps
 Requires **Python 3.10+**.
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/SathvickN/health-wrapped.git
 cd health-wrapped
 
 python3 -m venv venv
@@ -178,8 +178,17 @@ marathon_prep.py  # training-block vs YTD report + step totals
 
 ## Privacy
 
-- All processing is local. The only optional network call is to a local Ollama
-  instance you run yourself.
+- All processing is local. Your health data is **never** uploaded anywhere.
+- The only network activity is optional: with `--ai-summary`, the model weights
+  are **downloaded from** Hugging Face to your machine, and inference runs
+  against a local Ollama instance (`localhost`). The prompt is a generic "write
+  a running quote" — it contains **none** of your stats.
 - `.gitignore` excludes every health artifact: `export.zip`, `apple_health_export/`,
   `export.xml`, and the entire `output/` folder.
 - **Never commit your `export.zip`** — it contains your full health history.
+
+---
+
+## License
+
+[MIT](LICENSE) © 2026 Sathvick Narahari

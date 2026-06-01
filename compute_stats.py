@@ -80,6 +80,10 @@ def compute_activity_stats(df: pd.DataFrame) -> dict:
     count_by_activity = (
         df.groupby("activity").size().sort_values(ascending=False)
     )
+    # Calories per activity, aligned to the time ordering for the chart/table.
+    calories_by_activity = (
+        df.groupby("activity")["calories"].sum().reindex(minutes_by_activity.index)
+    )
 
     top_activity = minutes_by_activity.index[0]
     most_frequent = count_by_activity.index[0]
@@ -94,6 +98,7 @@ def compute_activity_stats(df: pd.DataFrame) -> dict:
         "n_types": int(minutes_by_activity.size),
         "minutes_by_activity": minutes_by_activity,
         "count_by_activity": count_by_activity,
+        "calories_by_activity": calories_by_activity,
         "top_activity": top_activity,
         "top_activity_hours": float(minutes_by_activity.iloc[0] / 60.0),
         "most_frequent": most_frequent,

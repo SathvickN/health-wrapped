@@ -26,32 +26,36 @@ def _fit_value(d, text, max_w, sizes=(38, 32, 26, 22)):
     return gc._font(sizes[-1])
 
 
-def _draw_hbars(d, series, x0, y0, x1, y1, title):
-    """Horizontal bars: time per activity type (top rows)."""
+def _draw_hbars(d, minutes, calories, x0, y0, x1, y1, title):
+    """Horizontal time bars per activity, with calories labelled per row."""
     gc._text_center(d, (x0 + x1) / 2, y0, title, gc._font(20), gc.GRAY)
-    top = series.head(6)
+    top = minutes.head(6)
     if top.empty:
         return
     row_top = y0 + 34
     avail = y1 - row_top
     rh = avail / len(top)
-    name_w = 230
+    name_w = 210
     bar_x0 = x0 + name_w
-    bar_x1 = x1 - 96
+    bar_x1 = x1 - 150          # leave room for time + calorie labels
     vmax = float(top.max()) or 1.0
     f_name = gc._font(18)
-    f_val = gc._font(17)
+    f_val = gc._font(16)
+    f_cal = gc._font(14)
     for i, (name, mins) in enumerate(top.items()):
         cy = row_top + i * rh + rh / 2
-        bh = min(26, rh - 10)
-        d.text((x0, cy - 10), name[:18], font=f_name, fill=gc.WHITE)
+        bh = min(24, rh - 12)
+        d.text((x0, cy - 9), name[:16], font=f_name, fill=gc.WHITE)
         seg = (mins / vmax) * (bar_x1 - bar_x0)
         d.rectangle([bar_x0, cy - bh / 2, bar_x0 + max(2, seg), cy + bh / 2],
                     fill=gc.BLUE)
-        h = int(mins // 60)
-        m = int(mins % 60)
-        label = f"{h}h {m:02d}m" if h else f"{m}m"
-        d.text((bar_x1 + 10, cy - 9), label, font=f_val, fill=gc.GRAY)
+        h, m = int(mins // 60), int(mins % 60)
+        tlabel = f"{h}h {m:02d}m" if h else f"{m}m"
+        d.text((bar_x1 + 12, cy - 16), tlabel, font=f_val, fill=gc.WHITE)
+        cal = calories.get(name)
+        if cal == cal and cal:  # not NaN / nonzero
+            d.text((bar_x1 + 12, cy + 4), f"{cal:,.0f} cal",
+                   font=f_cal, fill=gc.GREEN)
 
 
 def build_card(stats, name, year, out_path=OUT):
@@ -109,8 +113,8 @@ def build_card(stats, name, year, out_path=OUT):
         y += gc._text_center(d, cx, y, fun, f_small, gc.GREEN) + 8
 
     foot_y = H - PAD - 10
-    _draw_hbars(d, stats["minutes_by_activity"], PAD, y + 6, W - PAD,
-                foot_y - 36, "Time by Activity")
+    _draw_hbars(d, stats["minutes_by_activity"], stats["calories_by_activity"],
+                PAD, y + 6, W - PAD, foot_y - 36, "Time & Calories by Activity")
     gc._text_center(d, cx, foot_y, f"{year} · Apple Health", f_small, gc.GRAY)
 
     img.save(out_path)
@@ -135,10 +139,13 @@ def print_stats(stats, year):
         f"  Most frequent:    {stats['most_frequent']} "
         f"({stats['most_frequent_count']}x)",
         "  ----",
-        "  Time by activity:",
+        f"  {'By activity':<22} {'time':>8}   {'calories':>10}",
     ]
+    cals = stats["calories_by_activity"]
     for name, mins in stats["minutes_by_activity"].items():
-        lines.append(f"    {name:<22} {mins/60:>6.1f} h")
+        c = cals.get(name)
+        c_str = f"{c:,.0f}" if (c == c and c) else "—"
+        lines.append(f"    {name:<22} {mins/60:>6.1f} h   {c_str:>10}")
     lines.append("═══════════════════════════════════")
     text = "\n".join(lines)
     print(text)

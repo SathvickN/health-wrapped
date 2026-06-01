@@ -33,7 +33,7 @@ Output into `output/`:
 | `monthly_mileage.png` | `run.py` | Bar chart of miles per month |
 | `hr_zones.png` | `run.py` | Heart-rate zone distribution (pie) |
 | `stats.txt` | `run.py` | Plain-text running summary |
-| `activity_report_card.png` | `activity.py` | Activity Report card: tiles + time-by-activity bars |
+| `activity_report_card.png` | `activity.py` | Activity Report card: tiles + time-and-calories-by-activity bars |
 | `activity_stats.txt` | `activity.py` | Plain-text all-activity summary |
 | `marathon_prep.txt` | `marathon_prep.py` | YTD vs. training-block comparison |
 

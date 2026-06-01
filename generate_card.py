@@ -167,3 +167,45 @@ def generate_card(stats, name="Your Name", ai_text="", year=2026,
 
     img.save(out_path)
     return out_path
+
+
+def generate_mini_card(stats, name="Your Name", year=2026,
+                       out_path="output/run_mini_card.png"):
+    """Small Spotify-story-style share card: 3 big stats, portrait 1080x1920."""
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+    mw, mh = 1080, 1920
+    img = Image.new("RGB", (mw, mh), BG)
+    d = ImageDraw.Draw(img)
+    cx = mw / 2
+
+    f_kicker = _font(40)
+    f_num = _font(160)
+    f_label = _font(42)
+    f_sub = _font(34)
+    f_foot = _font(34)
+
+    _text_center(d, cx, 170, f"MY {year} IN RUNNING", f_kicker, GRAY)
+
+    items = [
+        ("TOTAL RUNS", f"{stats['total_runs']}", BLUE, None),
+        ("LONGEST RUN", f"{stats['longest_run_miles']:.1f} mi", ORANGE, None),
+        ("FASTEST PACE",
+         format_pace(stats["best_pace"]).replace(" /mi", ""),
+         GREEN, f"{60.0 / stats['best_pace']:.1f} mph"),
+    ]
+
+    top, bottom = 360, mh - 230
+    rowh = (bottom - top) / len(items)
+    for i, (label, val, color, sub) in enumerate(items):
+        center = top + (i + 0.5) * rowh
+        _text_center(d, cx, center - 130, label, f_label, WHITE)
+        nb = d.textbbox((0, 0), val, font=f_num)
+        d.text((cx - nb[2] / 2, center - 90), val, font=f_num, fill=color)
+        if sub:
+            _text_center(d, cx, center + 95, sub, f_sub, GRAY)
+
+    _text_center(d, cx, mh - 150, name, f_foot, WHITE)
+    _text_center(d, cx, mh - 100, f"{year} · Apple Health", f_sub, GRAY)
+
+    img.save(out_path)
+    return out_path

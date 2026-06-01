@@ -6,7 +6,7 @@ import os
 from parse_health import parse_workouts
 from compute_stats import compute_all_stats, format_pace
 from visualize import generate_all_charts
-from generate_card import generate_card
+from generate_card import generate_card, generate_mini_card
 from ai_summary import generate_summary, generate_analysis
 
 
@@ -103,12 +103,13 @@ def main():
         print("Generating AI summary...")
         ai_text = generate_summary(stats)
 
-    print("Generating shareable card...")
+    print("Generating shareable cards...")
     generate_card(stats, name=args.name, ai_text=ai_text, year=args.year)
+    generate_mini_card(stats, name=args.name, year=args.year)
 
     print("\nDone! Check the output/ folder.")
     outs = ["stats.txt", "monthly_mileage.png", "hr_zones.png",
-            "run_report_card.png"]
+            "run_report_card.png", "run_mini_card.png"]
     if args.ai_analysis:
         outs.append("ai_analysis.md")
     for f in outs:

@@ -13,6 +13,7 @@ from PIL import Image, ImageDraw
 import generate_card as gc
 from parse_health import parse_activities
 from compute_stats import compute_activity_stats, calorie_fun_line
+from visualize import generate_activity_charts
 
 OUT = "output/activity_report_card.png"
 
@@ -174,10 +175,13 @@ def main():
     if args.stats_only:
         return
 
-    print("\nGenerating activity card...")
+    print("\nGenerating activity charts...")
+    generate_activity_charts(stats, year=args.year)
+    print("Generating activity card...")
     build_card(stats, name=args.name, year=args.year)
     print("\nDone! Check the output/ folder.")
-    for f in ("activity_stats.txt", "activity_report_card.png"):
+    for f in ("activity_stats.txt", "activity_time.png",
+              "activity_calories.png", "activity_report_card.png"):
         print(f"  output/{f}")
 
 

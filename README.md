@@ -52,6 +52,8 @@ Output into `output/`:
 | `hr_zones.png` | `run.py` | Heart-rate zone distribution (pie) |
 | `stats.txt` | `run.py` | Plain-text running summary |
 | `activity_report_card.png` | `activity.py` | Activity Report card: tiles + time-and-calories-by-activity bars |
+| `activity_time.png` | `activity.py` | Bar chart of hours per activity type |
+| `activity_calories.png` | `activity.py` | Bar chart of calories per activity type |
 | `activity_stats.txt` | `activity.py` | Plain-text all-activity summary |
 | `ai_analysis.md` | `run.py --ai-analysis` | Local-LLM coaching analysis of your stats (optional) |
 | `marathon_prep.txt` | `marathon_prep.py` | YTD vs. training-block comparison |

@@ -17,6 +17,24 @@ your health data ever leaves your computer.
 
 ---
 
+## What it looks like
+
+| Run Report | Activity Report |
+|:---:|:---:|
+| ![Run Report card](docs/run_report_card.png) | ![Activity Report card](docs/activity_report_card.png) |
+
+And the standalone charts (`run.py`):
+
+| Monthly mileage | Heart-rate zones |
+|:---:|:---:|
+| ![Monthly mileage](docs/monthly_mileage.png) | ![HR zones](docs/hr_zones.png) |
+
+> The numbers above are my own 2026 data — aggregate totals (miles, pace,
+> average HR, calories), not raw health records. They're the sample output, so
+> you can see exactly what you'll get.
+
+---
+
 ## What you get
 
 Two commands, two cards:

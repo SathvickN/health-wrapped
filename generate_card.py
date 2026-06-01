@@ -4,7 +4,7 @@ import os
 
 from PIL import Image, ImageDraw, ImageFont
 
-from compute_stats import format_pace
+from compute_stats import format_pace, calorie_fun_line
 
 W = H = 1080
 PAD = 60
@@ -110,7 +110,7 @@ def generate_card(stats, name="Your Name", ai_text="", year=2026,
     f_small = _font(18)
 
     y = PAD
-    y += _text_center(d, cx, y, f"{year} Running Wrapped", f_title, WHITE) + 16
+    y += _text_center(d, cx, y, f"{year} Run Report", f_title, WHITE) + 16
     y += _text_center(d, cx, y, f"{name} · {year}", f_sub, GRAY) + 36
 
     # Stats grid 4x2 — maximise stat density.
@@ -145,7 +145,12 @@ def generate_card(stats, name="Your Name", ai_text="", year=2026,
                label, font=f_label, fill=GRAY)
         vb = d.textbbox((0, 0), value, font=f_val)
         d.text((ccx - vb[2] / 2, y0 + 50), value, font=f_val, fill=WHITE)
-    y = grid_top + n_rows * row_h + 18
+    y = grid_top + n_rows * row_h + 14
+
+    # Fun calorie-equivalent line.
+    fun = calorie_fun_line(stats.get("total_calories", 0))
+    if fun:
+        y += _text_center(d, cx, y, fun, f_small, GREEN) + 8
 
     # AI summary (optional, wrapped, max ~2 lines).
     if ai_text:
@@ -158,7 +163,7 @@ def generate_card(stats, name="Your Name", ai_text="", year=2026,
                     f_label, f_small, best=stats["best_month"])
 
     # Footer.
-    _text_center(d, cx, foot_y, f"{year} · Apple Health Wrapped", f_small, GRAY)
+    _text_center(d, cx, foot_y, f"{year} · Apple Health", f_small, GRAY)
 
     img.save(out_path)
     return out_path

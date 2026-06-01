@@ -15,17 +15,25 @@ leaves your computer.
 
 ## What you get
 
-Running into `output/`:
+Two commands, two cards:
 
-| File | What |
-|------|------|
-| `year_in_review_card.png` | Shareable 1080×1080 card: 8 stat tiles + monthly bar chart |
-| `monthly_mileage.png` | Bar chart of miles per month |
-| `hr_zones.png` | Heart-rate zone distribution (pie) |
-| `stats.txt` | Plain-text year summary |
-| `marathon_prep.txt` | YTD vs. training-block comparison (optional tool) |
+- **`python run.py`** → a **Run Report** (running only)
+- **`python activity.py`** → an **Activity Report** (every workout type: runs,
+  walks, cycling, strength, stair climbing, hiking, ...)
 
-Stats are **de-duplicated**: if you log the same run in multiple apps
+Output into `output/`:
+
+| File | From | What |
+|------|------|------|
+| `year_in_review_card.png` | `run.py` | Run Report card: 8 stat tiles + monthly bar chart |
+| `monthly_mileage.png` | `run.py` | Bar chart of miles per month |
+| `hr_zones.png` | `run.py` | Heart-rate zone distribution (pie) |
+| `stats.txt` | `run.py` | Plain-text running summary |
+| `activity_review_card.png` | `activity.py` | Activity Report card: tiles + time-by-activity bars |
+| `activity_stats.txt` | `activity.py` | Plain-text all-activity summary |
+| `marathon_prep.txt` | `marathon_prep.py` | YTD vs. training-block comparison |
+
+Stats are **de-duplicated**: if you log the same workout in multiple apps
 (Apple Watch + Strava + Runna), it's counted once. See
 [How dedup works](#how-dedup-works).
 
@@ -61,8 +69,16 @@ directly — no need to unzip.
 
 ## Run it
 
+**Running insights:**
+
 ```bash
 python run.py --zip export.zip --year 2026 --name "Your Name"
+```
+
+**All-activity insights** (same flags):
+
+```bash
+python activity.py --zip export.zip --year 2026 --name "Your Name"
 ```
 
 Parsing the whole export can take a minute or two on large exports.
@@ -144,11 +160,12 @@ window or priority in `parse_health.py` (`DEDUP_WINDOW_MIN`, `_source_rank`).
 ## Project layout
 
 ```
-run.py            # entry point: parse → stats → charts → card
-parse_health.py   # stream export.xml → clean, de-duplicated workouts DataFrame
-compute_stats.py  # aggregate workouts into a stats dict
+run.py            # entry point: running insights → Run Report card
+activity.py       # entry point: all-activity insights → Activity Report card
+parse_health.py   # stream export.xml → clean, de-duplicated workout DataFrames
+compute_stats.py  # aggregate workouts into stats dicts (run + activity)
 visualize.py      # matplotlib charts (PNG)
-generate_card.py  # Pillow shareable card
+generate_card.py  # Pillow Run Report card
 ai_summary.py     # optional summary: Llama 3.2 3B from Hugging Face, run locally
 marathon_prep.py  # training-block vs YTD report + step totals
 ```

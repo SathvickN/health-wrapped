@@ -1,9 +1,32 @@
 """Aggregate the parsed workouts DataFrame into a stats dict."""
 
 import calendar
+import random
 
 import numpy as np
 import pandas as pd
+
+# (name, kcal each, ...) for the fun calorie-equivalent line.
+_FOODS = [
+    ("Big Macs", 563),
+    ("pizza slices", 285),
+    ("glazed donuts", 260),
+    ("Chipotle burritos", 1075),
+    ("pints of ice cream", 1000),
+    ("cheeseburgers", 300),
+    ("chocolate bars", 230),
+    ("cans of soda", 140),
+    ("tacos", 210),
+]
+
+
+def calorie_fun_line(total_cal: float) -> str:
+    """e.g. 'Enough to torch ~43 Big Macs.'"""
+    if not total_cal or total_cal <= 0:
+        return ""
+    name, kcal = random.choice(_FOODS)
+    n = max(1, round(total_cal / kcal))
+    return f"Enough to torch ~{n:,} {name}."
 
 # Default max HR when age is unknown.
 DEFAULT_MAX_HR = 185.0
@@ -42,6 +65,40 @@ def _hr_zones(df: pd.DataFrame, max_hr: float) -> dict:
             counts["Z4"] += 1
     total = len(hrs)
     return {z: round(100.0 * c / total, 1) for z, c in counts.items()}
+
+
+def compute_activity_stats(df: pd.DataFrame) -> dict:
+    """Aggregate ALL workout types into a stats dict for the Activity card."""
+    df = df.copy()
+    has_cal = df["calories"].notna().any()
+    has_dist = df["distance_mi"].notna().any()
+    has_hr = df["avg_hr"].notna().any()
+
+    minutes_by_activity = (
+        df.groupby("activity")["duration_min"].sum().sort_values(ascending=False)
+    )
+    count_by_activity = (
+        df.groupby("activity").size().sort_values(ascending=False)
+    )
+
+    top_activity = minutes_by_activity.index[0]
+    most_frequent = count_by_activity.index[0]
+
+    return {
+        "total_workouts": len(df),
+        "total_time_hours": float(df["duration_min"].sum() / 60.0),
+        "total_calories": float(df["calories"].sum()) if has_cal else 0.0,
+        "total_distance_mi": float(df["distance_mi"].sum()) if has_dist else 0.0,
+        "avg_hr": float(df["avg_hr"].mean()) if has_hr else float("nan"),
+        "active_days": int(df["date"].dt.date.nunique()),
+        "n_types": int(minutes_by_activity.size),
+        "minutes_by_activity": minutes_by_activity,
+        "count_by_activity": count_by_activity,
+        "top_activity": top_activity,
+        "top_activity_hours": float(minutes_by_activity.iloc[0] / 60.0),
+        "most_frequent": most_frequent,
+        "most_frequent_count": int(count_by_activity.iloc[0]),
+    }
 
 
 def compute_all_stats(df: pd.DataFrame, max_hr: float = DEFAULT_MAX_HR) -> dict:

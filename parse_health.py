@@ -9,6 +9,7 @@ Handles two Apple export layouts:
 Both are supported transparently.
 """
 
+import re
 import zipfile
 import xml.etree.ElementTree as ET
 from datetime import datetime
@@ -209,6 +210,146 @@ def _dedup_workouts(df: pd.DataFrame,
         })
 
     return pd.DataFrame(merged).sort_values("date").reset_index(drop=True)
+
+
+def _clean_activity_name(raw: str) -> str:
+    """'HKWorkoutActivityTypeTraditionalStrengthTraining' -> 'Strength Training'."""
+    t = (raw or "").replace("HKWorkoutActivityType", "")
+    t = re.sub(r"(?<!^)(?=[A-Z])", " ", t).strip()
+    # A few friendlier names.
+    t = t.replace("Traditional Strength Training", "Strength")
+    t = t.replace("Functional Strength Training", "Functional Strength")
+    t = t.replace("High Intensity Interval Training", "HIIT")
+    t = t.replace("Distance Walking Running", "Walk/Run")
+    return t or "Other"
+
+
+def _process_activity(w: dict):
+    """Generic processor for ANY workout type (not just running)."""
+    date = _parse_date(w.get("startDate", ""))
+    if date is None:
+        return None
+    duration = _stat_float(w, "duration")
+    if not duration or duration <= 0:
+        return None
+
+    distance = _stat_float(w, "totalDistance")
+    dist_unit = w.get("totalDistanceUnit", "mi")
+    calories = _stat_float(w, "totalEnergyBurned")
+    avg_hr = max_hr = None
+    for s in w["_stats"]:
+        stype = s.get("type", "")
+        unit = s.get("unit", "")
+        if "Distance" in stype and distance is None:
+            distance = _stat_float(s, "sum")
+            dist_unit = unit or "mi"
+        elif "ActiveEnergyBurned" in stype and calories is None:
+            calories = _stat_float(s, "sum")
+        elif "HeartRate" in stype:
+            avg_hr = _stat_float(s, "average")
+            max_hr = _stat_float(s, "maximum")
+
+    if distance is not None:
+        distance = _to_miles(distance, dist_unit)
+
+    return {
+        "date": date,
+        "activity": _clean_activity_name(w.get("workoutActivityType", "")),
+        "duration_min": duration,
+        "distance_mi": distance,
+        "calories": calories,
+        "avg_hr": avg_hr,
+        "max_hr": max_hr,
+        "source": w.get("sourceName", ""),
+    }
+
+
+def _dedup_activities(df: pd.DataFrame,
+                      window_min: int = DEDUP_WINDOW_MIN) -> pd.DataFrame:
+    """Like _dedup_workouts but clusters within the SAME activity type."""
+    if df.empty:
+        return df
+    df = df.sort_values(["activity", "date"]).reset_index(drop=True)
+    df["_rank"] = df["source"].map(_source_rank)
+
+    cluster_ids = []
+    cid = -1
+    anchor = None
+    prev_act = None
+    for act, d in zip(df["activity"], df["date"]):
+        if (act != prev_act or anchor is None
+                or (d - anchor).total_seconds() / 60.0 > window_min):
+            cid += 1
+            anchor = d
+            prev_act = act
+        cluster_ids.append(cid)
+    df = df.assign(_cluster=cluster_ids)
+
+    merged = []
+    for _, g in df.groupby("_cluster"):
+        g = g.sort_values("_rank")
+        rep = g.iloc[0]
+
+        def pick(col):
+            if pd.notna(rep[col]):
+                return rep[col]
+            vals = g[col].dropna()
+            return vals.iloc[0] if len(vals) else None
+
+        merged.append({
+            "date": rep["date"],
+            "activity": rep["activity"],
+            "duration_min": float(rep["duration_min"]),
+            "distance_mi": pick("distance_mi"),
+            "calories": pick("calories"),
+            "avg_hr": pick("avg_hr"),
+            "max_hr": pick("max_hr"),
+            "source": rep["source"],
+        })
+    return pd.DataFrame(merged).sort_values("date").reset_index(drop=True)
+
+
+def parse_activities(zip_path: str, year: int = None) -> pd.DataFrame:
+    """Parse ALL workout types (runs, walks, cycling, strength, ...).
+
+    Columns: date, activity, duration_min, distance_mi, calories, avg_hr,
+    max_hr, source.
+    """
+    rows = []
+    with zipfile.ZipFile(zip_path) as zf:
+        xml_name = _find_xml_name(zf)
+        with zf.open(xml_name) as f:
+            current = None
+            pbar = tqdm(desc="Scanning activities", unit=" elem", unit_scale=True)
+            for event, elem in ET.iterparse(f, events=("start", "end")):
+                tag = elem.tag
+                if event == "start":
+                    if tag == "Workout":
+                        current = dict(elem.attrib)
+                        current["_stats"] = []
+                    elif tag == "WorkoutStatistics" and current is not None:
+                        current["_stats"].append(dict(elem.attrib))
+                else:
+                    if tag == "Workout":
+                        if current is not None:
+                            row = _process_activity(current)
+                            if row is not None:
+                                rows.append(row)
+                            current = None
+                        pbar.update(1)
+                        elem.clear()
+                    elif tag == "Record":
+                        elem.clear()
+            pbar.close()
+
+    df = pd.DataFrame(rows)
+    if df.empty:
+        return df
+    df = df.sort_values("date").reset_index(drop=True)
+    df = _dedup_activities(df)
+    if year is not None:
+        df = df[df["date"].dt.year == year].reset_index(drop=True)
+    return df
 
 
 def parse_workouts(zip_path: str, year: int = None) -> pd.DataFrame:

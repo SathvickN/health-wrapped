@@ -187,9 +187,10 @@ marathon_prep.py  # training-block vs YTD report + step totals
   are **downloaded from** Hugging Face to your machine, and inference runs
   against a local Ollama instance (`localhost`). The prompt is a generic "write
   a running quote" — it contains **none** of your stats.
-- `.gitignore` excludes every health artifact: `export.zip`, `apple_health_export/`,
-  `export.xml`, and the entire `output/` folder.
-- **Never commit your `export.zip`** — it contains your full health history.
+- `.gitignore` excludes the health artifacts by name (`export.zip`,
+  `apple_health_export/`, `export.xml`) and the whole `output/` folder — but if
+  you rename your export, **double-check it never gets committed.** That zip is
+  your full health history.
 
 ---
 

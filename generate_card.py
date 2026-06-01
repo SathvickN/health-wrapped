@@ -169,43 +169,79 @@ def generate_card(stats, name="Your Name", ai_text="", year=2026,
     return out_path
 
 
+def _vgradient(w, h, top_rgb, bot_rgb):
+    """Vertical gradient image."""
+    base = Image.new("RGB", (w, h))
+    px = base.load()
+    for y in range(h):
+        t = y / (h - 1)
+        r = int(top_rgb[0] + (bot_rgb[0] - top_rgb[0]) * t)
+        g = int(top_rgb[1] + (bot_rgb[1] - top_rgb[1]) * t)
+        b = int(top_rgb[2] + (bot_rgb[2] - top_rgb[2]) * t)
+        for x in range(w):
+            px[x, y] = (r, g, b)
+    return base
+
+
 def generate_mini_card(stats, name="Your Name", year=2026,
                        out_path="output/run_mini_card.png"):
-    """Small Spotify-story-style share card: 3 big stats, portrait 1080x1920."""
+    """Fun Spotify-story-style share card: vibrant gradient, frosted stat
+    panels, 3 big numbers. Portrait 1080x1920."""
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     mw, mh = 1080, 1920
-    img = Image.new("RGB", (mw, mh), BG)
-    d = ImageDraw.Draw(img)
+
+    # Vibrant sunset→purple gradient background.
+    img = _vgradient(mw, mh, (255, 126, 95), (94, 23, 235)).convert("RGBA")
     cx = mw / 2
 
-    f_kicker = _font(40)
-    f_num = _font(160)
-    f_label = _font(42)
-    f_sub = _font(34)
-    f_foot = _font(34)
-
-    _text_center(d, cx, 170, f"MY {year} IN RUNNING", f_kicker, GRAY)
+    f_kick = _font(52)
+    f_kick2 = _font(34)
+    f_num = _font(150)
+    f_label = _font(38)
+    f_micro = _font(30)
+    f_foot = _font(36)
 
     items = [
-        ("TOTAL RUNS", f"{stats['total_runs']}", BLUE, None),
-        ("LONGEST RUN", f"{stats['longest_run_miles']:.1f} mi", ORANGE, None),
-        ("FASTEST PACE",
-         format_pace(stats["best_pace"]).replace(" /mi", ""),
-         GREEN, f"{60.0 / stats['best_pace']:.1f} mph"),
+        ("TOTAL RUNS", f"{stats['total_runs']}",
+         "times you laced up this year", (79, 195, 247)),
+        ("LONGEST RUN", f"{stats['longest_run_miles']:.1f} mi",
+         "your biggest single push", (255, 213, 79)),
+        ("FASTEST PACE", format_pace(stats["best_pace"]).replace(" /mi", ""),
+         f"that's {60.0 / stats['best_pace']:.1f} mph at full flight",
+         (129, 199, 132)),
     ]
 
-    top, bottom = 360, mh - 230
-    rowh = (bottom - top) / len(items)
-    for i, (label, val, color, sub) in enumerate(items):
-        center = top + (i + 0.5) * rowh
-        _text_center(d, cx, center - 130, label, f_label, WHITE)
+    # Frosted dark panels via an alpha overlay.
+    overlay = Image.new("RGBA", (mw, mh), (0, 0, 0, 0))
+    od = ImageDraw.Draw(overlay)
+    margin = 70
+    top = 380
+    ph, gap = 400, 46
+    for i in range(len(items)):
+        y0 = top + i * (ph + gap)
+        od.rounded_rectangle([margin, y0, mw - margin, y0 + ph],
+                             radius=44, fill=(0, 0, 0, 110))
+    img = Image.alpha_composite(img, overlay)
+    d = ImageDraw.Draw(img)
+
+    # Header.
+    _text_center(d, cx, 150, "RUNNING WRAPPED", f_kick, WHITE)
+    _text_center(d, cx, 222, f"my {year} · @ Apple Health", f_kick2,
+                 (255, 255, 255))
+
+    # Panels.
+    for i, (label, val, micro, color) in enumerate(items):
+        y0 = top + i * (ph + gap)
+        cyc = y0 + ph / 2
+        # accent label chip color
+        _text_center(d, cx, y0 + 40, label, f_label, color)
         nb = d.textbbox((0, 0), val, font=f_num)
-        d.text((cx - nb[2] / 2, center - 90), val, font=f_num, fill=color)
-        if sub:
-            _text_center(d, cx, center + 95, sub, f_sub, GRAY)
+        d.text((cx - nb[2] / 2, cyc - 95), val, font=f_num, fill=WHITE)
+        _text_center(d, cx, y0 + ph - 64, micro, f_micro, (220, 220, 230))
 
     _text_center(d, cx, mh - 150, name, f_foot, WHITE)
-    _text_center(d, cx, mh - 100, f"{year} · Apple Health", f_sub, GRAY)
+    _text_center(d, cx, mh - 96, "made locally · 100% private", f_micro,
+                 (235, 235, 245))
 
-    img.save(out_path)
+    img.convert("RGB").save(out_path)
     return out_path
